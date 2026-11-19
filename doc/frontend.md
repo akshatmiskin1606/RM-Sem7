@@ -19,7 +19,7 @@ The `useArtifact()` hook loads data by endpoint and version. For questions and c
 
 [`Graph.jsx`](../web/src/Graph.jsx) uses `react-force-graph-2d` to display every saved node and directed relationship. The relationship view loads on demand. Nodes are coloured by label, and parallel links curve apart so individual relationships can be inspected. The canvas places labels in available screen space and shortens long labels. Zooming makes more labels fit. Hovering or selecting an edge shows its full relationship type, and selecting a node shows its full name and source page when known.
 
-**Fit graph** zooms to the graph bounds. **Full screen** uses the browser fullscreen API with an expanded-panel fallback. The renderer resizes and fits the graph as the available space changes. The graph JSON is downloadable from either graph view.
+**Fit graph** zooms to the graph bounds. **Full screen** uses the browser fullscreen API with an expanded-panel fallback. The renderer resizes and fits the graph as the available space changes. **Download graph** is available from either graph view and offers the saved JSON, GraphML, and a ZIP of the node and relationship CSV files.
 
 ## Quiz attempt and downloads
 

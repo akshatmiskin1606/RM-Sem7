@@ -19,6 +19,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from uuid import uuid4
 
 from assessment_selector import BalanceSettings, CHECKPOINT_MESSAGE, select_questions
+from graph_exports import GRAPH_DOWNLOADS, csv_archive, graphml
 from pdf_to_mcq import DIFFICULTIES, ROOT, RUNTIME, read_saved_graph
 from question_exports import CONTENT_TYPES, questions_csv, questions_pdf
 from syllabus import build_syllabus, resolve_topics
@@ -149,6 +150,13 @@ class Workspace:
         # Serialize PyMuPDF calls with syllabus parsing in this threaded server.
         with self.lock:
             return questions_pdf(result, candidate_set=artifact == 'candidates')
+
+    def graph_download(self, identity, export_format):
+        data = self.artifact(identity, 'graph').read_bytes()
+        if export_format == 'json':
+            return data
+        graph = json.loads(data)
+        return graphml(graph) if export_format == 'graphml' else csv_archive(graph)
 
     def _start(self, document, state, stage, routine, *args):
         state['job'] = {'stage': stage, 'status': 'running', 'error': '', 'target': args[0] if args else None}
@@ -388,15 +396,19 @@ class Handler(SimpleHTTPRequestHandler):
             if method == 'GET' and action == 'syllabus':
                 return self._json(workspace.syllabus(identity))
             if method == 'GET' and action in {'graph', 'questions', 'candidates'}:
-                if action in {'questions', 'candidates'}:
-                    formats = parse_qs(request_url.query, keep_blank_values=True).get('format')
-                    if formats:
-                        if len(formats) != 1 or formats[0] not in CONTENT_TYPES:
-                            raise RequestError(HTTPStatus.BAD_REQUEST, 'Choose PDF, CSV, or JSON.')
-                        export_format = formats[0]
-                        return self._respond(workspace.question_download(identity, action, export_format),
-                                             CONTENT_TYPES[export_format], filename=f'{action}.{export_format}')
-                return self._respond(workspace.artifact(identity, action).read_bytes())
+                formats = parse_qs(request_url.query, keep_blank_values=True).get('format')
+                if formats is None:
+                    return self._respond(workspace.artifact(identity, action).read_bytes())
+                export_format = formats[0] if len(formats) == 1 else None
+                if action == 'graph':
+                    if export_format not in GRAPH_DOWNLOADS:
+                        raise RequestError(HTTPStatus.BAD_REQUEST, 'Choose JSON, GraphML, or CSV for the graph.')
+                    content_type, filename = GRAPH_DOWNLOADS[export_format]
+                    return self._respond(workspace.graph_download(identity, export_format), content_type, filename=filename)
+                if export_format not in CONTENT_TYPES:
+                    raise RequestError(HTTPStatus.BAD_REQUEST, 'Choose PDF, CSV, or JSON.')
+                return self._respond(workspace.question_download(identity, action, export_format),
+                                     CONTENT_TYPES[export_format], filename=f'{action}.{export_format}')
             if method == 'POST' and action == 'questions':
                 try:
                     data = json.loads(self._body(512 * 1024))

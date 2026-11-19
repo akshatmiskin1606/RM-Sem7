@@ -162,13 +162,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .text-button { background: transparent; border: 0; padding: 0; color: var(--green); text-decoration: none; font-weight: 650; font-size: 13px; }
 .text-button:hover { text-decoration: underline; }
 .question-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
-.quiz-download { position: relative; }
-.quiz-download summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
-.quiz-download summary::-webkit-details-marker { display: none; }
-.quiz-download summary::after { content: ''; width: 5px; height: 5px; margin-top: -3px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg); }
-.quiz-download ul { position: absolute; z-index: 2; inset-inline-end: 0; min-width: 110px; margin: 4px 0 0; padding: 4px; list-style: none; background: white; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 10px #243b281c; }
-.quiz-download a { display: block; padding: 7px 9px; border-radius: 4px; color: var(--green); font-weight: 650; text-decoration: none; }
-.quiz-download a:hover, .quiz-download a:focus-visible { background: var(--light-green); }
+.download-menu { position: relative; }
+.download-menu summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.download-menu summary::-webkit-details-marker { display: none; }
+.download-menu summary::after { content: ''; width: 5px; height: 5px; margin-top: -3px; border: solid currentColor; border-width: 0 1px 1px 0; transform: rotate(45deg); }
+.download-menu ul { position: absolute; z-index: 2; inset-inline-end: 0; min-width: 110px; margin: 4px 0 0; padding: 4px; list-style: none; background: white; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 10px #243b281c; }
+.download-menu a { display: block; padding: 7px 9px; border-radius: 4px; color: var(--green); font-weight: 650; text-decoration: none; }
+.download-menu a:hover, .download-menu a:focus-visible { background: var(--light-green); }
 
 .quiz-list { margin: 0; padding: 0 20px 0 45px; line-height: 1.5; }
 .question { padding-block: 16px; border-bottom: 1px solid #edf0eb; }

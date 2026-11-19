@@ -32,8 +32,8 @@ def _quiz_rows(result):
         yield number, str(question['stem']), options, answer, options.get(answer, '')
 
 
-def _spreadsheet_text(value):
-    # Question text comes from arbitrary PDFs. Keep spreadsheet apps from evaluating it as a formula.
+def spreadsheet_text(value):
+    # Keep spreadsheet apps from evaluating model-generated text as a formula.
     if value.startswith(('\t', '\r', '\n')) or value.lstrip().startswith(('=', '+', '-', '@', '＝', '＋', '－', '＠')):
         return "'" + value
     return value
@@ -44,7 +44,7 @@ def questions_csv(result):
     writer = csv.writer(output)
     writer.writerow(('Number', 'Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct option', 'Correct answer'))
     for number, stem, options, answer, answer_text in _quiz_rows(result):
-        writer.writerow((number, *map(_spreadsheet_text, (stem, *options.values(), answer, answer_text))))
+        writer.writerow((number, *map(spreadsheet_text, (stem, *options.values(), answer, answer_text))))
     return output.getvalue().encode('utf-8-sig')
 
 

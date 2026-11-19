@@ -17,6 +17,8 @@ const number = new Intl.NumberFormat();
 const DEFAULT_BALANCE_SETTINGS = { extra_questions: 2, max_seconds: 30 };
 const MAX_EXTRA_QUESTIONS = 50;
 const MAX_EXTRA_SECONDS = 3600;
+const QUESTION_EXPORTS = [ ['pdf', 'PDF', '.pdf'], ['csv', 'CSV', '.csv'], ['json', 'JSON', '.json'] ];
+const GRAPH_EXPORTS = [ ['json', 'JSON', '.json'], ['graphml', 'GraphML', '.graphml'], ['csv', 'CSV (ZIP)', '-csv.zip'] ];
 
 function isValidCount(value, maximum) {
   const count = Number(value);
@@ -133,22 +135,20 @@ function GraphEvidence({ reasoning }) {
   </details>;
 }
 
-function QuizDownloads({ url, candidateSet }) {
-  const fileName = candidateSet ? 'candidates' : 'questions';
-  const label = candidateSet ? 'Download candidate set' : 'Download questions';
-  return <details className="quiz-download" key={url} onKeyDown={event => {
+function DownloadMenu({ url, fileName, label, formats, className, title = 'Download' }) {
+  return <details className={`download-menu ${className}`} key={url} onKeyDown={event => {
     if (event.key === 'Escape') {
       event.currentTarget.open = false;
       event.currentTarget.querySelector('summary').focus();
     }
   }}>
-    <summary className="small-button" aria-label={label}>Download</summary>
-    <ul>{['pdf', 'csv', 'json'].map(format => <li key={format}>
-      <a href={`${url}?format=${format}`} download={`${fileName}.${format}`} onClick={event => {
+    <summary className="small-button" aria-label={label || title}>{title}</summary>
+    <ul>{formats.map(([format, option, suffix]) => <li key={format}>
+      <a href={`${url}?format=${format}`} download={`${fileName}${suffix}`} onClick={event => {
         const menu = event.currentTarget.closest('details');
         menu.open = false;
         menu.querySelector('summary').focus();
-      }}>{format.toUpperCase()}</a>
+      }}>{option}</a>
     </li>)}</ul>
   </details>;
 }
@@ -158,7 +158,8 @@ function QuestionResults({ result, target, url, candidateSet = false, onStartQui
     <div className="result-meta">
       <span><strong>{result.assessments.length}</strong> of {target} {candidateSet ? 'candidates' : 'questions'}{DIFFICULTY[result.difficulty] && ` · ${DIFFICULTY[result.difficulty].label}`}</span>
       <div className="question-actions">
-        <QuizDownloads url={url} candidateSet={candidateSet} />
+        <DownloadMenu url={url} fileName={candidateSet ? 'candidates' : 'questions'} formats={QUESTION_EXPORTS}
+          label={candidateSet ? 'Download candidate set' : 'Download questions'} className="quiz-download" />
         <button type="button" className="small-button primary" ref={startQuizButton} disabled={!result.assessments.length}
           onClick={() => onStartQuiz(result, candidateSet)}>Start Quiz</button>
       </div>
@@ -386,7 +387,8 @@ function App() {
                 : current?.graph ? <>
                   <div className="result-meta">
                     <span><strong>{number.format(current.graph.nodes)}</strong> nodes <i /> <strong>{number.format(current.graph.relationships)}</strong> relationships <i /> {current.graph.pages} {current.graph.pages === 1 ? 'page' : 'pages'}</span>
-                    <a className="text-button" href={`/api${graphPath}`} download="knowledge-graph.json">Download JSON</a>
+                    <DownloadMenu url={`/api${graphPath}`} fileName="knowledge-graph" title="Download graph"
+                      formats={GRAPH_EXPORTS} className="graph-download" />
                   </div>
                   <div className="graph-view-switch" role="group" aria-label="Graph view">
                     <button type="button" className="small-button" aria-pressed={graphView === 'chapters'} onClick={() => setGraphView('chapters')}>Chapters</button>

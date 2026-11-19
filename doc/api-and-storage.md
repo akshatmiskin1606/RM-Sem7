@@ -18,6 +18,8 @@
 
 For the two question artifact endpoints, append `?format=pdf`, `?format=csv`, or `?format=json` to download the current set as an attachment. The ordinary endpoint returns JSON for the application.
 
+The graph endpoint accepts `?format=json` for the original `knowledge-graph.json`, `?format=graphml` for `knowledge-graph.graphml`, or `?format=csv` for `knowledge-graph-csv.zip`. The ZIP contains `nodes.csv` and `relationships.csv` joined by node IDs. GraphML retains directed edges, including parallel edges and loops, and carries the original node IDs and JSON-encoded properties as attributes. See [`apps/graph_exports.py`](../apps/graph_exports.py).
+
 ### Question request
 
 ```json

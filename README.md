@@ -77,6 +77,8 @@ Use **Chapters** to expand the document into chapters, subtopics, and graph
 keywords. Check the topics you want under **Syllabus Control** before generating
 a batch. A checked chapter includes its descendants. **Clear** restores the
 whole-document scope, and **Relationships** opens the interactive edge view.
+Use **Download graph** to export the full saved graph as JSON, GraphML, or a ZIP
+containing the node and relationship CSV files.
 
 Choose **Easy**, **Medium**, or **Hard** under **Difficulty**. The workspace
 uses KAQG's native difficulty and evaluation features with one, two, or three
