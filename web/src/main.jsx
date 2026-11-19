@@ -64,7 +64,7 @@ function useArtifact(path, version) {
 }
 
 function Brand() {
-  return <div className="brand"><span className="brand-icon" aria-hidden="true"><i /><i /><i /><i /></span>KAQG</div>;
+  return <div className="brand"><span className="brand-icon" aria-hidden="true"><i /><i /><i /><i /></span>Study Grid</div>;
 }
 
 function GraphIllustration() {
