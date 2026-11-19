@@ -1,10 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ForceGraph from 'react-force-graph-2d';
 
-const colours = { concept: '#177556', fact: '#78a28f', document: '#ba863d' };
+const graphColours = {
+  dark: {
+    nodes: { concept: '#62cee9', fact: '#95a6bb', document: '#efbd84' },
+    nodeLabel: '#e9eff8', relationshipLabel: '#acd1ef', labelHalo: '#10151c',
+    link: '#596a80', highlightedLink: '#7cdbfa',
+  },
+  light: {
+    nodes: { concept: '#177556', fact: '#78a28f', document: '#ba863d' },
+    nodeLabel: '#22352d', relationshipLabel: '#3b6558', labelHalo: '#fcfdfb',
+    link: '#b1bfb7', highlightedLink: '#2c725b',
+  },
+};
 const labelPriority = { document: 0, concept: 1, fact: 2 };
 const classificationTypes = new Set(['is_a', 'include_in']);
-const relationshipColour = '#3b6558';
 const nodeRadius = 3.8;
 const labelHeight = 12;
 const labelCell = 16;
@@ -41,7 +51,7 @@ function relationshipTooltip({ type }) {
   return label;
 }
 
-function drawLabels(context, scale, nodes, links, widths, activeLink) {
+function drawLabels(context, scale, nodes, links, widths, activeLink, colours) {
   const transform = context.getTransform();
   const ratio = window.devicePixelRatio;
   const width = context.canvas.width / ratio;
@@ -53,7 +63,7 @@ function drawLabels(context, scale, nodes, links, widths, activeLink) {
   context.font = `500 ${labelHeight}px system-ui, sans-serif`;
   context.textAlign = 'center';
   context.textBaseline = 'top';
-  context.strokeStyle = '#fcfdfb';
+  context.strokeStyle = colours.labelHalo;
   context.lineWidth = 3;
   context.lineJoin = 'round';
 
@@ -100,7 +110,7 @@ function drawLabels(context, scale, nodes, links, widths, activeLink) {
     return paint(label, screenX(x), screenY(y) - labelHeight / 2);
   }
 
-  context.fillStyle = relationshipColour;
+  context.fillStyle = colours.relationshipLabel;
   if (activeLink) paintRelationship(activeLink, true);
   // Leave space for a few distinct relationship names in the full-graph overview.
   const featuredTypes = new Set(activeLink ? [activeLink.type] : []);
@@ -108,19 +118,19 @@ function drawLabels(context, scale, nodes, links, widths, activeLink) {
     if (featuredTypes.size >= 6 || classificationTypes.has(link.type)) break;
     if (!featuredTypes.has(link.type) && paintRelationship(link, false)) featuredTypes.add(link.type);
   }
-  context.fillStyle = '#22352d';
+  context.fillStyle = colours.nodeLabel;
   for (const { x, y, label } of nodes) {
     const top = screenY(y) + nodeRadius * scale + 3;
     paint(label, screenX(x), top);
   }
-  context.fillStyle = relationshipColour;
+  context.fillStyle = colours.relationshipLabel;
   for (const link of links) {
     if (link !== activeLink) paintRelationship(link, false);
   }
   context.restore();
 }
 
-export default function Graph({ result }) {
+export default function Graph({ result, theme }) {
   const panel = useRef(null);
   const container = useRef(null);
   const view = useRef(null);
@@ -146,7 +156,8 @@ export default function Graph({ result }) {
   const relationship = detail?.type ? detail : null;
   const node = relationship ? null : detail;
   const highlightedLink = hovered?.type ? hovered : relationship;
-  const linkColour = useCallback(link => link === highlightedLink ? '#2c725b' : '#b1bfb7', [highlightedLink]);
+  const colours = graphColours[theme];
+  const linkColour = useCallback(link => link === highlightedLink ? colours.highlightedLink : colours.link, [colours, highlightedLink]);
   const linkWidth = useCallback(link => link === highlightedLink ? 1.8 : 0.7, [highlightedLink]);
   const fit = useCallback((duration = 250) => {
     view.current?.zoomToFit(duration, Math.min(48, width / 6, height / 6));
@@ -214,10 +225,10 @@ export default function Graph({ result }) {
       </div>
       {width > 0 && height > 0 && <ForceGraph
         ref={view} width={width} height={height} graphData={data}
-        nodeColor={({ kind }) => colours[kind] || colours.fact} nodeRelSize={nodeRadius}
+        nodeColor={({ kind }) => colours.nodes[kind] || colours.nodes.fact} nodeRelSize={nodeRadius}
         linkColor={linkColour} linkWidth={linkWidth} linkCurvature="curvature" linkDirectionalArrowLength={2}
         nodeLabel={() => ''} linkLabel={relationshipTooltip}
-        onRenderFramePost={(context, scale) => drawLabels(context, scale, labelOrder, relationshipOrder, labelWidths, highlightedLink)}
+        onRenderFramePost={(context, scale) => drawLabels(context, scale, labelOrder, relationshipOrder, labelWidths, highlightedLink, colours)}
         onNodeClick={setSelected} onNodeHover={setHovered}
         onLinkClick={setSelected} onLinkHover={setHovered} onBackgroundClick={() => setSelected(null)}
         cooldownTicks={200} cooldownTime={6500}
@@ -232,7 +243,7 @@ export default function Graph({ result }) {
     <div className="graph-caption">
       {relationship ? <div className="relationship-detail">{relationship.source.name} → <strong>{relationship.type}</strong> → {relationship.target.name}</div>
         : node ? <div><strong>{node.name}</strong><span className="node-description">{node.kind}{node.page ? ` · Page ${node.page}` : ''}</span></div>
-        : <div className="legend">{Object.entries(colours).map(([kind, colour]) =>
+        : <div className="legend">{Object.entries(colours.nodes).map(([kind, colour]) =>
           <span key={kind}><i style={{ background: colour }} />{kind}</span>)}</div>}
       {selected && <button className="text-button" onClick={() => setSelected(null)}>Clear selection</button>}
       {fullscreen && <span className="graph-count">{count.format(data.nodes.length)} nodes · {count.format(data.links.length)} relationships</span>}

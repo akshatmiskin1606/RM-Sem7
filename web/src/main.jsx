@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { indexTopics, SyllabusControl, SyllabusOutline } from './Syllabus.jsx';
 import QuizAttempt, { LETTERS } from './QuizAttempt.jsx';
@@ -6,6 +6,7 @@ import './style.css';
 
 const Graph = lazy(() => import('./Graph.jsx'));
 const LAST_DOCUMENT = 'kaqg-last-document';
+const THEME_PREFERENCE = 'kaqg-theme';
 const DOCUMENT_ID = /^[a-f0-9]{32}$/;
 const WHOLE_DOCUMENT = [];
 const DIFFICULTY = {
@@ -180,6 +181,7 @@ function QuestionResults({ result, target, url, candidateSet = false, onStartQui
 }
 
 function App() {
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme === 'light' ? 'light' : 'dark');
   const [id, setId] = useState(initialDocument);
   const [documentStatus, setDocumentStatus] = useState(null);
   const [workspace, setWorkspace] = useState(null);
@@ -242,6 +244,18 @@ function App() {
   function exitQuiz() {
     setQuizAttempt(null);
     requestAnimationFrame(() => startQuizButton.current?.focus());
+  }
+
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--page').trim();
+  }, [theme]);
+
+  function toggleTheme() {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    try { localStorage.setItem(THEME_PREFERENCE, nextTheme); } catch { /* Browser storage may be off. */ }
   }
 
   useEffect(() => {
@@ -376,7 +390,15 @@ function App() {
   const balancing = running && job?.phase === 'balancing';
 
   return <>
-    <header className="topbar"><div className="frame topbar-inner"><Brand /><span className="local"><i />Local workspace</span></div></header>
+    <header className="topbar"><div className="frame topbar-inner">
+      <Brand />
+      <div className="topbar-actions">
+        <span className="local"><i />Local workspace</span>
+        <button type="button" className="theme-toggle small-button" role="switch" aria-checked={theme === 'dark'} onClick={toggleTheme}>
+          Dark mode <span className="theme-toggle-indicator" aria-hidden="true" />
+        </button>
+      </div>
+    </div></header>
     {quizAttempt ? <QuizAttempt {...quizAttempt} onExit={exitQuiz} /> : <main className="frame workspace">
       <div className="intro"><h1>PDF to questions</h1><p>Build a knowledge graph from a PDF and turn it into a multiple-choice quiz.</p></div>
       <div className="workspace-grid">
@@ -469,7 +491,7 @@ function App() {
                   {graphView === 'chapters'
                     ? syllabus.data ? <SyllabusOutline key={id} root={syllabus.data} selected={selectedTopicSet} disabled={busy} onToggle={toggleTopic} />
                       : <BlankState title={syllabus.error || 'Opening chapters…'} working={!syllabus.error} />
-                    : graph.data ? <Suspense fallback={<BlankState title="Opening graph…" working />}><Graph key={id} result={graph.data} /></Suspense>
+                    : graph.data ? <Suspense fallback={<BlankState title="Opening graph…" working />}><Graph key={id} result={graph.data} theme={theme} /></Suspense>
                       : <BlankState title={graph.error || 'Opening graph…'} working={!graph.error} />}
                 </> : <BlankState title={job?.status === 'failed' ? 'Graph could not be built' : 'No graph yet'} message={job?.status === 'failed' ? 'Check the activity log and try the PDF again.' : 'Upload a PDF to build your knowledge graph.'} />
             ) : (
