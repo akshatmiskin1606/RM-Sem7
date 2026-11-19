@@ -45,7 +45,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .panel { border: 1px solid var(--line); border-radius: 15px; background: #fff; box-shadow: 0 2px 3px #243b2820; }
 .controls { padding: 22px; }
 .control-section h2 { margin: 0 0 16px; font-size: 16px; font-weight: 690; letter-spacing: -.018em; }
-.questions-controls { border-top: 1px solid #e8ece6; margin-top: 23px; padding-top: 22px; }
+.following-section { border-top: 1px solid #e8ece6; margin-top: 23px; padding-top: 22px; }
+.graph-history-select {
+  display: block; width: 100%; min-width: 0; border: 1px solid #cdd8cf; border-radius: 7px;
+  padding: 8px 10px; color: var(--ink); background: white; font-size: 13px; text-overflow: ellipsis;
+}
+.history-job p { margin: 0 0 4px; overflow-wrap: anywhere; }
 .hidden-file { display: none; }
 .drop-zone {
   width: 100%; min-height: 148px; border: 1.5px dashed #b6cabd; border-radius: 11px;

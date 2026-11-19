@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import signal
+from stat import S_ISREG
 import subprocess
 import sys
 from threading import Event, RLock, Thread
@@ -82,6 +83,29 @@ class Workspace:
             if self.active and self.active.document.name == identity:
                 state = {**state, 'job': {**state['job'], 'activity': list(self.active.activity)}}
             return state
+
+    def history(self):
+        with self.lock:
+            documents = []
+            for document in self.directory.iterdir():
+                if not DOCUMENT_ID.fullmatch(document.name):
+                    continue
+                try:
+                    graph_file = (document / 'knowledge-graph.json').stat()
+                    state = self._load(document)
+                except (OSError, RequestError, ValueError):
+                    continue
+                if not S_ISREG(graph_file.st_mode) or not isinstance(state, dict):
+                    continue
+                if isinstance(state.get('graph'), dict) and state['graph'] and isinstance(state.get('filename'), str):
+                    documents.append({'id': document.name, 'filename': state['filename'],
+                                      'saved_at': graph_file.st_mtime})
+            documents.sort(key=lambda entry: (entry['saved_at'], entry['id']), reverse=True)
+            active = None
+            if self.active:
+                active = {'id': self.active.document.name, 'filename': self.active.state['filename'],
+                          'stage': self.active.state['job']['stage']}
+            return {'documents': documents, 'active': active}
 
     def _require_idle(self):
         if self.active or self.closing:
@@ -379,6 +403,8 @@ class Handler(SimpleHTTPRequestHandler):
             if self.headers.get('X-KAQG-Request') != '1' or (origin and origin != f"http://{self.headers['Host']}"):
                 raise RequestError(HTTPStatus.FORBIDDEN, 'Open the KAQG workspace before starting a job.')
         workspace = self.server.workspace
+        if method == 'GET' and path == '/api/documents':
+            return self._json(workspace.history())
         if method == 'POST' and path == '/api/documents':
             filename = unquote(self.headers.get('X-PDF-Name', 'document.pdf'))
             if not re.fullmatch(r'[^/\\\x00-\x1f\x7f]{1,180}\.pdf', filename, flags=re.IGNORECASE) or len(filename.encode()) > 240:

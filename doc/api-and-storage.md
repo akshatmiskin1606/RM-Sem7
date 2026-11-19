@@ -7,6 +7,7 @@
 | Method and path | Behaviour |
 | --- | --- |
 | `GET /` | Serves the React workspace from `web/dist` |
+| `GET /api/documents` | Lists saved graphs newest first as `documents` entries with `id`, `filename`, and `saved_at` (Unix seconds). Also returns `active` with `id`, `filename`, and `stage` for a running job, or `null`. |
 | `POST /api/documents` | Accepts raw PDF bytes and starts graph construction. Pass a URL-encoded filename in `X-PDF-Name` or use the default `document.pdf`. The server requires a PDF filename, checks for a PDF signature in the first 1,024 bytes, and limits the body to 100 MiB. Returns `202` with document status. |
 | `GET /api/documents/{id}` | Returns filename, graph and question metadata, and the current job status and activity |
 | `GET /api/documents/{id}/graph` | Returns the full saved knowledge graph JSON |
@@ -42,6 +43,8 @@ Application errors use `{"error": "…"}`. Typical statuses are `400` for invali
 ## Local state and publication
 
 Each uploaded PDF has a directory at `.kaqg-runtime/web-runs/<id>/` containing these files as applicable.
+
+Graph history reads the existing run directories and shows graphs with both published state and a saved graph file. The saved time comes from that graph file, so generating a new quiz keeps the graph's original position in history.
 
 | File | Purpose |
 | --- | --- |

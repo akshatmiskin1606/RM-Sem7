@@ -4,12 +4,14 @@ The workspace is a React single-page interface built by Vite and served by the l
 
 ## Workflow and state
 
-1. Choose or drop a PDF and click **Build graph**. The frontend sends the PDF as a raw request body. It switches to graph results and polls the document status during the job.
+1. Choose or drop a PDF and click **Build graph**, or pick an existing graph in **Graph history**. Each upload is stored separately. Selecting a saved graph opens its chapters and any previous question results so you can generate a new batch from the same evidence.
 2. Review the graph and optionally select topics in **Chapters**. **Syllabus Control** lists explicit selections. Choose **Clear** to return to whole-document generation.
 3. Choose the number of questions and difficulty, then click **Generate questions**. Enable **Apply QUBO optimisation** to make the advanced collection settings available. See [QUBO optimisation](optimisation.md) for the controls and time budget.
 4. Open **Questions** to view the questions and answer key. Questions include evidence paths and page references when available. When a candidate pool has been published, the view offers **Final Set** and **Candidate Set** tabs. Each set supports downloads and quiz attempts.
 
-The initial document comes from a valid `?document=<id>` parameter, the document ID saved in `localStorage` when the last job was accepted, or the build-time `VITE_DEFAULT_DOCUMENT`, in that order. The server holds the document, graph, and result records on disk. The frontend polls approximately once per second during a job and retries a failed poll after two seconds while the job is active. The **Activity** panel shows progress and exposes **Cancel run**. The [operations guide](operations.md) describes the two more detailed terminal streams.
+The initial document comes from a valid `?document=<id>` parameter, the last document opened in this browser, or the build-time `VITE_DEFAULT_DOCUMENT`, in that order. Graph history comes from the server's saved run directories and survives browser and server restarts. While a job runs, you can browse other graphs and use **View active job** to go back to its progress and cancellation controls. The server accepts one graph build or question generation job at a time.
+
+The frontend polls approximately once per second during a job and retries a failed document poll after two seconds while the job is active. The **Activity** panel shows progress and exposes **Cancel run**. The [operations guide](operations.md) describes the two more detailed terminal streams.
 
 The `useArtifact()` hook loads data by endpoint and version. For questions and candidates the version is the published filename, so it reloads when the checkpoint or selected result becomes current. It aborts stale fetches on changes. Controls disable during an active job and prevent invalid counts or time budgets from being submitted from the UI.
 

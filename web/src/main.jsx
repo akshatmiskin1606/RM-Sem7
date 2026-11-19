@@ -14,6 +14,7 @@ const DIFFICULTY = {
   hard: { label: 'Hard', hint: 'Combine three relationships, across topics when possible.' },
 };
 const number = new Intl.NumberFormat();
+const savedDate = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
 const DEFAULT_BALANCE_SETTINGS = { extra_questions: 2, max_seconds: 30 };
 const MAX_EXTRA_QUESTIONS = 50;
 const MAX_EXTRA_SECONDS = 3600;
@@ -180,7 +181,10 @@ function QuestionResults({ result, target, url, candidateSet = false, onStartQui
 
 function App() {
   const [id, setId] = useState(initialDocument);
-  const [current, setCurrent] = useState(null);
+  const [documentStatus, setDocumentStatus] = useState(null);
+  const [workspace, setWorkspace] = useState(null);
+  const [historyError, setHistoryError] = useState('');
+  const [historyRetry, setHistoryRetry] = useState(0);
   const [file, setFile] = useState(null);
   const [count, setCount] = useState('10');
   const [balance, setBalance] = useState(false);
@@ -197,13 +201,19 @@ function App() {
   const [error, setError] = useState('');
   const [connectionIssue, setConnectionIssue] = useState('');
   const documentPath = id ? `/documents/${id}` : null;
+  const current = documentStatus?.id === id ? documentStatus : null;
   const job = current?.job;
   const balanceSettings = balanceDraft ?? job?.balance_settings ?? DEFAULT_BALANCE_SETTINGS;
   const validExtras = isValidCount(balanceSettings.extra_questions, MAX_EXTRA_QUESTIONS);
   const validWindow = isValidCount(balanceSettings.max_seconds, MAX_EXTRA_SECONDS);
   const difficulty = difficultyChoice ?? job?.difficulty ?? 'medium';
   const running = job?.status === 'running';
-  const busy = running || Boolean(pending);
+  const active = workspace?.active;
+  const otherJob = active && active.id !== id ? active : null;
+  const opening = Boolean(documentPath && !current && !connectionIssue);
+  const busy = running || opening || Boolean(pending || active);
+  const savedGraphs = workspace?.documents ?? [];
+  const selectedGraph = savedGraphs.find(entry => entry.id === id);
   const graphPath = current?.graph && `${documentPath}/graph`;
   const syllabusPath = current?.graph && `${documentPath}/syllabus`;
   const questionPath = current?.questions && `${documentPath}/questions`;
@@ -235,14 +245,14 @@ function App() {
   }
 
   useEffect(() => {
-    if (!documentPath || (current && !running)) return;
+    if (!documentPath || pending || (current && !running)) return;
     const controller = new AbortController();
     let nextCheck;
     async function refresh() {
       try {
         const data = await api(documentPath, { signal: controller.signal });
         if (controller.signal.aborted) return;
-        setCurrent(data);
+        setDocumentStatus(data);
         setConnectionIssue('');
         if (data.job.status === 'running') nextCheck = setTimeout(refresh, 1000);
         else setCancelling(false);
@@ -254,7 +264,55 @@ function App() {
     }
     void refresh();
     return () => { controller.abort(); clearTimeout(nextCheck); };
-  }, [documentPath, Boolean(current), running]);
+  }, [documentPath, Boolean(current), running, pending]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let nextCheck;
+    let checking = false;
+    async function refreshHistory() {
+      if (checking) return;
+      clearTimeout(nextCheck);
+      checking = true;
+      try {
+        const data = await api('/documents', { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setWorkspace(data);
+        setHistoryError('');
+        if (data.active) nextCheck = setTimeout(refreshHistory, 1000);
+      } catch (problem) {
+        if (controller.signal.aborted) return;
+        setHistoryError(problem.message);
+        nextCheck = setTimeout(refreshHistory, 3000);
+      } finally {
+        checking = false;
+      }
+    }
+    void refreshHistory();
+    window.addEventListener('focus', refreshHistory);
+    return () => {
+      controller.abort();
+      clearTimeout(nextCheck);
+      window.removeEventListener('focus', refreshHistory);
+    };
+  }, [running, pending, historyRetry]);
+
+  function openDocument(identity, status = null) {
+    setId(identity);
+    setDocumentStatus(status);
+    setGraphView('chapters');
+    setTab('graph');
+    setQuestionSet('final');
+    setSyllabusSelection(null);
+    setDifficultyChoice(null);
+    setBalanceDraft(null);
+    setConnectionIssue('');
+    setError('');
+    const url = new URL(window.location.href);
+    url.searchParams.set('document', identity);
+    window.history.replaceState(null, '', url);
+    try { localStorage.setItem(LAST_DOCUMENT, identity); } catch { /* Browser storage may be off. */ }
+  }
 
   function selectFile(chosen) {
     if (!chosen) return;
@@ -288,18 +346,12 @@ function App() {
           count: Number(count), syllabus: selectedTopics, difficulty, balance,
           ...(balance && { balance_settings: { extra_questions: Number(balanceSettings.extra_questions), max_seconds: Number(balanceSettings.max_seconds) } }),
         }), { 'Content-Type': 'application/json' });
-      setId(data.id);
-      setCurrent(data);
       if (stage === 'graph') {
         setFile(null);
-        setGraphView('chapters');
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('document')) {
-          url.searchParams.delete('document');
-          window.history.replaceState(null, '', url);
-        }
+        openDocument(data.id, data);
+      } else {
+        setDocumentStatus(data);
       }
-      try { localStorage.setItem(LAST_DOCUMENT, data.id); } catch { /* Browser storage may be off. */ }
     } catch (problem) {
       setError(problem.message);
     } finally {
@@ -334,7 +386,26 @@ function App() {
             <Upload file={file} previousName={current?.filename} busy={busy} onFile={selectFile} />
             <button className="primary action" onClick={() => start('graph')} disabled={!file || busy}>{building ? 'Building graph…' : 'Build graph'}<span aria-hidden="true">→</span></button>
           </section>
-          <section className="control-section questions-controls">
+          <section className="control-section following-section">
+            <h2><label htmlFor="graph-history">Graph history</label></h2>
+            <select id="graph-history" className="graph-history-select" value={selectedGraph?.id ?? ''}
+              title={selectedGraph?.filename} disabled={!savedGraphs.length || Boolean(pending) || cancelling}
+              onChange={event => openDocument(event.target.value)}>
+              <option value="" disabled>{workspace && !savedGraphs.length ? 'No saved graphs yet' : 'Choose a saved graph'}</option>
+              {savedGraphs.map(entry => <option key={entry.id} value={entry.id}>
+                {entry.filename} — {savedDate.format(entry.saved_at * 1000)}
+              </option>)}
+            </select>
+            {historyError && <p className="control-note inline-error" role="alert">Could not load graph history.{' '}
+              <button type="button" className="text-button" onClick={() => setHistoryRetry(value => value + 1)}>Retry</button>
+            </p>}
+            {otherJob && <div className="control-note history-job">
+              <p role="status">{otherJob.stage === 'graph' ? 'Building graph for ' : 'Generating questions for '}{otherJob.filename}</p>
+              <button type="button" className="text-button" disabled={Boolean(pending) || cancelling}
+                onClick={() => openDocument(otherJob.id)}>View active job</button>
+            </div>}
+          </section>
+          <section className="control-section following-section">
             <h2>Question batch</h2>
             {current?.graph && <SyllabusControl selected={selectedTopics} topics={topics} disabled={busy}
               onClear={() => setSyllabusSelection({ id, topics: [] })} />}
@@ -384,6 +455,7 @@ function App() {
             </nav>
             {tab === 'graph' ? (
               building ? <BlankState title="Building your graph" message={statusMessage || 'Uploading the PDF…'} working />
+                : opening ? <BlankState title="Opening your graph…" working />
                 : current?.graph ? <>
                   <div className="result-meta">
                     <span><strong>{number.format(current.graph.nodes)}</strong> nodes <i /> <strong>{number.format(current.graph.relationships)}</strong> relationships <i /> {current.graph.pages} {current.graph.pages === 1 ? 'page' : 'pages'}</span>
