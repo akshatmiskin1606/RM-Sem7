@@ -1,0 +1,17 @@
+colorama
+docker
+langdetect
+neo4j
+networkx
+numpy
+openpyxl
+openai
+paho-mqtt
+pdfplumber
+Pillow
+PyMuPDF
+PyYAML
+requests
+toml
+
+mas-agentflow

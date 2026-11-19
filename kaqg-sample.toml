@@ -1,0 +1,42 @@
+[system]
+version = 1
+
+# Logging configuration
+[logging]
+name = "kaqg"                       # Logger name
+path = "_log/kaqg.log"              # Log file path
+level = "WARNING"                   # VERBOSE, DEBUG, INFO, WARNING, ERROR
+
+# Broker configuration
+[broker]
+broker_name = "mqtt01"
+
+# Broker details
+[broker.mqtt01]                     # mqtt broker configuration
+broker_type = "mqtt"                # Type of broker (e.g., mqtt)
+host = "localhost"                  # MQTT broker host
+port = 1883                         # MQTT broker port
+username = ""                       # MQTT username   
+password = ""                       # MQTT password
+keepalive = 60                      # Keepalive interval in seconds
+
+# Service configuration
+[service]
+
+# File service configuration
+[service.file]
+home_directory = "_upload"          # Directory to store uploaded files
+
+# LLM service configuration
+[service.llm]
+name = "ChatGpt"
+
+[service.llm.ChatGpt]
+model = "gpt-4o-mini"
+openai_api_key = ""  # Leave empty to use OPENAI_API_KEY from the environment.
+
+# Knowledge graph service configuration
+[service.kg]
+# The docker host and data path for docker container
+hostname = "localhost"              # Docker host
+datapath = "path/to/docker/volume"  # Path to Docker volume for KG data
